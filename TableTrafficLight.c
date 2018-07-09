@@ -33,15 +33,16 @@
 #define RedP3		9
 #define FlashP3	10
 
-#define Sgreen	0x61
-#define Syellow	0x62
-#define Wgreen	0x4C
-#define Wyellow	0x54
-#define Pgreen	0xA4
-#define Pred		0x64
-#define Poff		0x24
+#define Sgreen	0x21
+#define Syellow	0x22
+#define Wgreen	0x0C
+#define Wyellow	0x14
+#define WSred		0x24
+#define Pgreen	0x08
+#define Pred		0x02
+#define Poff		0x00
 
-#define HALF_SECOND 500
+#define HALF_SECOND 50
 #define SECOND 			1000
 // ***** 2. Global Declarations Section *****
 
@@ -54,39 +55,48 @@ void SystickWait(unsigned long delay);           // SysTick wait function
 void SystickWait1ms(unsigned long wait_time_ms); // SysTick delay function
 
  struct State{
-	int out;
+	int B_out;
+	int F_out;
 	int wait;
 	int next[8];
 };
  typedef const struct State state_t;
 
 state_t light[11]={
-	{Sgreen,HALF_SECOND ,{0,1,0,1,1,1,1,1}},	//0
-	{Syellow,HALF_SECOND,{0,2,1,2,4,2,4,2}},	//1
-	{Wgreen,HALF_SECOND ,{2,2,3,3,3,3,3,3}},	//2
-	{Wyellow,HALF_SECOND,{2,2,0,0,4,4,0,4}},	//3
-	{Pgreen,HALF_SECOND ,{4,5,5,5,5,5,5,5}},	//4
-	{Pred,HALF_SECOND   ,{6,6,6,6,6,6,6,6}},	//5
-	{Poff,HALF_SECOND   ,{7,7,7,7,7,7,7,7}},	//6
-	{Pred,HALF_SECOND   ,{8,8,8,8,8,8,8,8}},	//7
-	{Poff,HALF_SECOND   ,{9,9,9,9,9,9,9,9}},	//8
-	{Pred,HALF_SECOND   ,{10,10,10,10,10,10,10,10}},	//9
-	{Poff,HALF_SECOND   ,{4,2,0,0,4,2,0,0}}
+	{Sgreen,Pred,HALF_SECOND ,{GoS,WaitS,GoS,WaitS,WaitS,WaitS,WaitS,WaitS}},	//0
+	{Syellow,Pred,HALF_SECOND,{GoS,GoW,WaitS,GoW,GoP,GoW,GoP,GoW}},	//1
+	{Wgreen,Pred,HALF_SECOND ,{GoW,GoW,WaitW,WaitW,WaitW,WaitW,WaitW,WaitW}},	//2
+	{Wyellow,Pred,HALF_SECOND,{GoW,GoW,GoS,GoS,GoP,GoP,GoS,GoP}},	//3
+	{WSred,Pgreen,HALF_SECOND ,{GoP,RedP1,RedP1,RedP1,GoP,RedP1,RedP1,RedP1}},	//4
+	{WSred,Pred,HALF_SECOND   ,{FlashP1,FlashP1,FlashP1,FlashP1,FlashP1,FlashP1,FlashP1,FlashP1}},	//5
+	{WSred,Poff,HALF_SECOND   ,{RedP2,RedP2,RedP2,RedP2,RedP2,RedP2,RedP2,RedP2}},	//6
+	{WSred,Pred,HALF_SECOND   ,{FlashP2,FlashP2,FlashP2,FlashP2,FlashP2,FlashP2,FlashP2,FlashP2}},	//7
+	{WSred,Poff,HALF_SECOND   ,{RedP3,RedP3,RedP3,RedP3,RedP3,RedP3,RedP3,RedP3}},	//8
+	{WSred,Pred,HALF_SECOND   ,{FlashP3,FlashP3,FlashP3,FlashP3,FlashP3,FlashP3,FlashP3,FlashP3}},	//9
+	{WSred,Poff,HALF_SECOND   ,{GoP,GoW,GoS,GoS,GoP,GoW,GoS,GoS}}						//10
 };
 // ***** 3. Subroutines Section *****
 int main(void){ 
 	int state=GoS; //initial state is Green for south
-	int input=0;
+	int input=0,in_decimal=0,i=1;
   TExaS_Init(SW_PIN_PE210, LED_PIN_PB543210,ScopeOff); // activate grader and set system clock to 80 MHz
   SystickInit();
   PortsInit();
   EnableInterrupts();
   while(1){
-    GPIO_PORTB_DATA_R = (light[state].out) & 0x3F;
-		GPIO_PORTF_DATA_R = (((light[state].out) & 0x40)>>5) | (((light[state].out) & 0x80)>>3); //PF1 and PF3
+    GPIO_PORTB_DATA_R = light[state].B_out;
+		GPIO_PORTF_DATA_R = light[state].F_out ; //PF1 and PF3
 		SystickWait1ms(light[state].wait);	//delay
 		input=GPIO_PORTE_DATA_R & 0x07;
-		state=light[state].next[input];		
+		while(input){
+			in_decimal += (input& 0x1)*i;
+			input = input>>1;
+			i *=2;
+		}
+		state=light[state].next[in_decimal];		
+		input=0;
+		i=1;
+		in_decimal=0;
   }
 }
 void PortsInit(void) {
