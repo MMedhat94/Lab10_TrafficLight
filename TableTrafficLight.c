@@ -42,7 +42,7 @@
 #define Pred		0x02
 #define Poff		0x00
 
-#define HALF_SECOND 50
+#define HALF_SECOND 500
 #define SECOND 			1000
 // ***** 2. Global Declarations Section *****
 
@@ -78,7 +78,7 @@ state_t light[11]={
 // ***** 3. Subroutines Section *****
 int main(void){ 
 	int state=GoS; //initial state is Green for south
-	int input=0,in_decimal=0,i=1;
+	int input=0;
   TExaS_Init(SW_PIN_PE210, LED_PIN_PB543210,ScopeOff); // activate grader and set system clock to 80 MHz
   SystickInit();
   PortsInit();
@@ -88,15 +88,8 @@ int main(void){
 		GPIO_PORTF_DATA_R = light[state].F_out ; //PF1 and PF3
 		SystickWait1ms(light[state].wait);	//delay
 		input=GPIO_PORTE_DATA_R & 0x07;
-		while(input){
-			in_decimal += (input& 0x1)*i;
-			input = input>>1;
-			i *=2;
-		}
-		state=light[state].next[in_decimal];		
-		input=0;
-		i=1;
-		in_decimal=0;
+
+		state=light[state].next[input];		
   }
 }
 void PortsInit(void) {
